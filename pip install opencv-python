@@ -1,0 +1,40 @@
+import cv2
+import numpy as np
+
+cap = cv2.VideoCapture('video.mp4')  # استبدال 'video.mp4' بمسار الفيديو الخاص بك
+
+# قراءة الإطارين الأوليين
+ret, frame1 = cap.read()
+prvs = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+
+# إعداد حقل لتحديد الجسم
+hsv = np.zeros_like(frame1)
+hsv[..., 1] = 255
+
+while True:
+    ret, frame2 = cap.read()
+    next_img = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+
+    # تطبيق Optical Flow
+    flow = cv2.calcOpticalFlowFarneback(prvs, next_img, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+
+    # تحويل الزاوية والمقياس من الإحداثيات القطبية إلى الإحداثيات الاستطالية
+    mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+    hsv[..., 0] = ang * 180 / np.pi / 2
+    hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+
+    # تحويل من نموذج HSV إلى BGR
+    rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+    # عرض الصورة
+    cv2.imshow('Optical Flow', rgb)
+
+    # اختبار للخروج عند الضغط على 'Esc'
+    if cv2.waitKey(30) & 0xFF == 27:
+        break
+
+    # تحديث الإطار السابق
+    prvs = next_img
+
+cap.release()
+cv2.destroyAllWindows()
